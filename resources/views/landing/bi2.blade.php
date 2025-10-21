@@ -727,8 +727,39 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Atualizar cores dos gráficos de barras baseado no filtro
         updateChartColorsByMunicipios(municipiosFiltrados);
+        
+        // Atualizar cards com valores agregados dos municípios filtrados
+        updateCardsWithFilteredMunicipios(municipiosFiltrados);
     }
     
+    // Função para atualizar cards com valores agregados dos municípios filtrados
+    function updateCardsWithFilteredMunicipios(municipiosFiltrados) {
+        // Calcular valores agregados dos municípios filtrados
+        let totalInvestimento = 0;
+        let totalProjetos = 0;
+        
+        municipiosFiltrados.forEach(municipio => {
+            const investimentoData = investimentosData.find(item => item.municipio === municipio);
+            const projetoData = projetosData.find(item => item.municipio === municipio);
+            
+            if (investimentoData) {
+                totalInvestimento += investimentoData.valor_investimento || 0;
+            }
+            if (projetoData) {
+                totalProjetos += projetoData.total_projetos || 0;
+            }
+        });
+        
+        // Atualizar cards com valores agregados
+        updateCardValue('recursos-captacao-externa', totalInvestimento);
+        updateCardValue('recursos-estado', totalInvestimento);
+        updateCardValue('recursos-totais', totalInvestimento);
+        updateCardValue('obras-concluidas', totalInvestimento);
+        updateCardValue('obras-andamento', totalInvestimento);
+        updateCardValue('total-projetos', totalProjetos);
+        updateCardValue('projetos-parceria', totalProjetos);
+    }
+
     // Função para atualizar cores dos gráficos baseado em lista de municípios
     function updateChartColorsByMunicipios(municipiosFiltrados) {
         if (investimentosChart) {
@@ -739,7 +770,7 @@ document.addEventListener('DOMContentLoaded', function() {
             investimentosChart.data.datasets[0].borderColor = backgroundColor;
             investimentosChart.update();
         }
-        
+
         if (projetosChart) {
             const backgroundColor = projetosChart.data.labels.map((label) => {
                 return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
@@ -749,16 +780,16 @@ document.addEventListener('DOMContentLoaded', function() {
             projetosChart.update();
         }
     }
-    
+
     // Função para atualizar gráfico de parcerias com dados de um município específico
     function updatePartnershipChartForMunicipio(municipio) {
         if (!parceriasChart) return;
-        
+
         // Simular dados específicos do município
         // Em uma implementação real, você buscaria esses dados do banco
         let comParceria = 0;
         let semParceria = 0;
-        
+
         // Simulação baseada no município
         if (['GOIÂNIA', 'APARECIDA DE GOIÂNIA', 'ANÁPOLIS'].includes(municipio)) {
             comParceria = 80;
@@ -767,7 +798,7 @@ document.addEventListener('DOMContentLoaded', function() {
             comParceria = 10;
             semParceria = 90;
         }
-        
+
         parceriasChart.data.datasets[0].data = [semParceria, comParceria];
         parceriasChart.update();
     }
@@ -954,10 +985,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Atualizar cores dos gráficos de barras
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
-            
+
             // Atualizar gráfico de parcerias com dados do município
             updatePartnershipChartForMunicipio(selectedMunicipioName);
-            
+
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
         }
@@ -1051,10 +1082,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Atualizar cores dos gráficos de barras
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
-            
+
             // Atualizar gráfico de parcerias com dados do município
             updatePartnershipChartForMunicipio(selectedMunicipioName);
-            
+
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
         }
@@ -1108,11 +1139,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adicionar evento de clique no gráfico de parcerias
     parceriasChart.canvas.addEventListener('click', function(event) {
         const points = parceriasChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-        
+
         if (points.length > 0) {
             const firstPoint = points[0];
             const selectedIndex = firstPoint.index;
-            
+
             // Determinar tipo de parceria baseado no índice
             let partnershipType = null;
             if (selectedIndex === 0) {
@@ -1120,17 +1151,14 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (selectedIndex === 1) {
                 partnershipType = 'com_parceria'; // POSSUI PARCERIA
             }
-            
+
             if (partnershipType) {
                 // Atualizar seleção
                 selectedPartnershipType = partnershipType;
                 selectedMunicipio = null; // Limpar seleção de município
-                
+
                 // Filtrar municípios por tipo de parceria
                 filterMunicipiosByPartnership(partnershipType);
-                
-                // Restaurar valores originais dos cards (já que estamos filtrando, não selecionando um município específico)
-                restoreOriginalCardValues();
             }
         }
     });
