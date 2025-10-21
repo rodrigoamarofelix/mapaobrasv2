@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
             investimentosChart.data.datasets[0].borderColor = borderColor;
             investimentosChart.update();
         }
-        
+
         if (projetosChart) {
             const backgroundColor = projetosChart.data.labels.map((label) => {
                 return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
@@ -845,35 +845,63 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Função para restaurar valores originais dos cards
-    function restoreOriginalCardValues() {
-        console.log('Restaurando valores originais...');
+    window.restoreOriginalCardValues = function() {
+        console.log('=== INICIANDO RESTAURAÇÃO ===');
         
-        // Restaurar valores originais (você pode ajustar estes valores conforme necessário)
-        updateCardValue('recursos-captacao-externa', {{ $recursos_financeiros->recursos_captacao_externa ?? 0 }});
-        updateCardValue('recursos-estado', {{ $recursos_financeiros->recursos_estado ?? 0 }});
-        updateCardValue('recursos-totais', {{ $recursos_financeiros->recursos_totais ?? 0 }});
-        updateCardValue('obras-concluidas', {{ $status_obras->obras_concluidas ?? 0 }});
-        updateCardValue('obras-andamento', {{ $status_obras->obras_andamento ?? 0 }});
-        updateCardValue('total-projetos', {{ $total_projetos ?? 0 }});
-        updateCardValue('projetos-parceria', {{ $projetos_parceria->total ?? 0 }});
+        // Valores originais dos cards
+        const valoresOriginais = {
+            'recursos-captacao-externa': {{ $recursos_financeiros->recursos_captacao_externa ?? 0 }},
+            'recursos-estado': {{ $recursos_financeiros->recursos_estado ?? 0 }},
+            'recursos-totais': {{ $recursos_financeiros->recursos_totais ?? 0 }},
+            'obras-concluidas': {{ $status_obras->obras_concluidas ?? 0 }},
+            'obras-andamento': {{ $status_obras->obras_andamento ?? 0 }},
+            'total-projetos': {{ $total_projetos ?? 0 }},
+            'projetos-parceria': {{ $projetos_parceria->total ?? 0 }}
+        };
+        
+        console.log('Valores originais:', valoresOriginais);
+        
+        // Restaurar valores dos cards
+        Object.keys(valoresOriginais).forEach(cardId => {
+            const cardElement = document.querySelector(`[data-card="${cardId}"] .metric-value`);
+            if (cardElement) {
+                const value = valoresOriginais[cardId];
+                if (cardId.includes('projetos')) {
+                    cardElement.textContent = value.toLocaleString('pt-BR');
+                } else {
+                    cardElement.textContent = 'R$ ' + (value / 1000000).toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }) + ' Mi';
+                }
+                console.log(`Card ${cardId} restaurado para:`, cardElement.textContent);
+            } else {
+                console.error(`Elemento não encontrado para card: ${cardId}`);
+            }
+        });
 
         // Restaurar cores dos gráficos
         selectedMunicipio = null;
         selectedPartnershipType = null;
+        console.log('Variáveis de seleção limpas');
 
         // Restaurar gráficos de barras
         if (investimentosChart) {
             investimentosChart.data.datasets[0].backgroundColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.data.datasets[0].borderColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.update();
-            console.log('Gráfico de investimentos restaurado');
+            console.log('✅ Gráfico de investimentos restaurado');
+        } else {
+            console.error('❌ Gráfico de investimentos não encontrado');
         }
 
         if (projetosChart) {
             projetosChart.data.datasets[0].backgroundColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.data.datasets[0].borderColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.update();
-            console.log('Gráfico de projetos restaurado');
+            console.log('✅ Gráfico de projetos restaurado');
+        } else {
+            console.error('❌ Gráfico de projetos não encontrado');
         }
 
         // Restaurar gráfico de parcerias
@@ -881,11 +909,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const parceriaData = @json($projetos_parceria ?? (object)['com_parceria' => 0, 'sem_parceria' => 0]);
             parceriasChart.data.datasets[0].data = [parceriaData.sem_parceria || 0, parceriaData.com_parceria || 0];
             parceriasChart.update();
-            console.log('Gráfico de parcerias restaurado');
+            console.log('✅ Gráfico de parcerias restaurado');
+        } else {
+            console.error('❌ Gráfico de parcerias não encontrado');
         }
         
-        console.log('Valores restaurados com sucesso!');
-    }
+        console.log('=== RESTAURAÇÃO CONCLUÍDA ===');
+    };
 
     // Calcular altura interna do gráfico baseada no número de municípios
     const minHeightPerItem = 35; // altura mínima por município
