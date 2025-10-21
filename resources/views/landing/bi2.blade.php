@@ -717,31 +717,31 @@ document.addEventListener('DOMContentLoaded', function() {
         // Por enquanto, vamos simular com dados hardcoded
         const municipiosComParceria = ['GOIÂNIA', 'APARECIDA DE GOIÂNIA', 'ANÁPOLIS'];
         const municipiosSemParceria = ['ITUMBIARA', 'LUZIÂNIA', 'FORMOSA', 'CATALÃO'];
-        
+
         let municipiosFiltrados = [];
         if (partnershipType === 'com_parceria') {
             municipiosFiltrados = municipiosComParceria;
         } else if (partnershipType === 'sem_parceria') {
             municipiosFiltrados = municipiosSemParceria;
         }
-        
+
         // Atualizar cores dos gráficos de barras baseado no filtro
         updateChartColorsByMunicipios(municipiosFiltrados);
-        
+
         // Atualizar cards com valores agregados dos municípios filtrados
         updateCardsWithFilteredMunicipios(municipiosFiltrados);
     }
-    
+
     // Função para atualizar cards com valores agregados dos municípios filtrados
     function updateCardsWithFilteredMunicipios(municipiosFiltrados) {
         // Calcular valores agregados dos municípios filtrados
         let totalInvestimento = 0;
         let totalProjetos = 0;
-        
+
         municipiosFiltrados.forEach(municipio => {
             const investimentoData = investimentosData.find(item => item.municipio === municipio);
             const projetoData = projetosData.find(item => item.municipio === municipio);
-            
+
             if (investimentoData) {
                 totalInvestimento += investimentoData.valor_investimento || 0;
             }
@@ -749,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 totalProjetos += projetoData.total_projetos || 0;
             }
         });
-        
+
         // Atualizar cards com valores agregados
         updateCardValue('recursos-captacao-externa', totalInvestimento);
         updateCardValue('recursos-estado', totalInvestimento);
@@ -766,17 +766,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const backgroundColor = investimentosChart.data.labels.map((label) => {
                 return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
             });
+            const borderColor = investimentosChart.data.labels.map((label) => {
+                return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
+            });
             investimentosChart.data.datasets[0].backgroundColor = backgroundColor;
-            investimentosChart.data.datasets[0].borderColor = backgroundColor;
+            investimentosChart.data.datasets[0].borderColor = borderColor;
             investimentosChart.update();
         }
-
+        
         if (projetosChart) {
             const backgroundColor = projetosChart.data.labels.map((label) => {
                 return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
             });
+            const borderColor = projetosChart.data.labels.map((label) => {
+                return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
+            });
             projetosChart.data.datasets[0].backgroundColor = backgroundColor;
-            projetosChart.data.datasets[0].borderColor = backgroundColor;
+            projetosChart.data.datasets[0].borderColor = borderColor;
             projetosChart.update();
         }
     }
