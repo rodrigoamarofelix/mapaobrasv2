@@ -846,6 +846,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Função para restaurar valores originais dos cards
     function restoreOriginalCardValues() {
+        console.log('Restaurando valores originais...');
+        
         // Restaurar valores originais (você pode ajustar estes valores conforme necessário)
         updateCardValue('recursos-captacao-externa', {{ $recursos_financeiros->recursos_captacao_externa ?? 0 }});
         updateCardValue('recursos-estado', {{ $recursos_financeiros->recursos_estado ?? 0 }});
@@ -857,18 +859,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Restaurar cores dos gráficos
         selectedMunicipio = null;
+        selectedPartnershipType = null;
 
         // Restaurar gráficos de barras
         if (investimentosChart) {
             investimentosChart.data.datasets[0].backgroundColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.data.datasets[0].borderColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.update();
+            console.log('Gráfico de investimentos restaurado');
         }
 
         if (projetosChart) {
             projetosChart.data.datasets[0].backgroundColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.data.datasets[0].borderColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.update();
+            console.log('Gráfico de projetos restaurado');
         }
 
         // Restaurar gráfico de parcerias
@@ -876,7 +881,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const parceriaData = @json($projetos_parceria ?? (object)['com_parceria' => 0, 'sem_parceria' => 0]);
             parceriasChart.data.datasets[0].data = [parceriaData.sem_parceria || 0, parceriaData.com_parceria || 0];
             parceriasChart.update();
+            console.log('Gráfico de parcerias restaurado');
         }
+        
+        console.log('Valores restaurados com sucesso!');
     }
 
     // Calcular altura interna do gráfico baseada no número de municípios
