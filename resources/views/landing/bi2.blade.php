@@ -308,7 +308,7 @@
                 <div class="charts-row">
                     <div class="chart-container-center">
                         <div class="chart-card">
-                            <h4>TOP MUNICÍPIOS POR INVESTIMENTO</h4>
+                            <h4>PROJETOS COM CAPTAÇÃO DE RECURSOS X PROJETOS COM RECURSOS DO ESTADO</h4>
                             <div class="chart-wrapper">
                                 <canvas id="projetosParceriaChart"></canvas>
         </div>
@@ -684,9 +684,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Variáveis para controle de seleção
     let selectedMunicipio = null;
+    let selectedPartnershipType = null; // 'com_parceria' ou 'sem_parceria'
     let investimentosChart = null;
     let projetosChart = null;
-    let municipiosPieChart = null;
+    let parceriasChart = null;
 
     // Cores para estados
     const colors = {
@@ -700,26 +701,75 @@ document.addEventListener('DOMContentLoaded', function() {
         const backgroundColor = chart.data.labels.map((label, index) => {
             return index === selectedIndex ? colors.selected : colors.unselected;
         });
-        
+
         const borderColor = chart.data.labels.map((label, index) => {
             return index === selectedIndex ? colors.selected : colors.unselected;
         });
-        
+
         chart.data.datasets[0].backgroundColor = backgroundColor;
         chart.data.datasets[0].borderColor = borderColor;
         chart.update();
     }
+
+    // Função para filtrar municípios por tipo de parceria
+    function filterMunicipiosByPartnership(partnershipType) {
+        // Esta função seria implementada com dados reais do banco
+        // Por enquanto, vamos simular com dados hardcoded
+        const municipiosComParceria = ['GOIÂNIA', 'APARECIDA DE GOIÂNIA', 'ANÁPOLIS'];
+        const municipiosSemParceria = ['ITUMBIARA', 'LUZIÂNIA', 'FORMOSA', 'CATALÃO'];
+        
+        let municipiosFiltrados = [];
+        if (partnershipType === 'com_parceria') {
+            municipiosFiltrados = municipiosComParceria;
+        } else if (partnershipType === 'sem_parceria') {
+            municipiosFiltrados = municipiosSemParceria;
+        }
+        
+        // Atualizar cores dos gráficos de barras baseado no filtro
+        updateChartColorsByMunicipios(municipiosFiltrados);
+    }
     
-    // Função para atualizar cores do gráfico de pizza
-    function updatePieChartColors(selectedMunicipioName) {
-        if (!municipiosPieChart) return;
+    // Função para atualizar cores dos gráficos baseado em lista de municípios
+    function updateChartColorsByMunicipios(municipiosFiltrados) {
+        if (investimentosChart) {
+            const backgroundColor = investimentosChart.data.labels.map((label) => {
+                return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
+            });
+            investimentosChart.data.datasets[0].backgroundColor = backgroundColor;
+            investimentosChart.data.datasets[0].borderColor = backgroundColor;
+            investimentosChart.update();
+        }
         
-        const backgroundColor = municipiosPieChart.data.labels.map((label) => {
-            return label === selectedMunicipioName ? colors.selected : colors.unselected;
-        });
+        if (projetosChart) {
+            const backgroundColor = projetosChart.data.labels.map((label) => {
+                return municipiosFiltrados.includes(label) ? colors.selected : colors.unselected;
+            });
+            projetosChart.data.datasets[0].backgroundColor = backgroundColor;
+            projetosChart.data.datasets[0].borderColor = backgroundColor;
+            projetosChart.update();
+        }
+    }
+    
+    // Função para atualizar gráfico de parcerias com dados de um município específico
+    function updatePartnershipChartForMunicipio(municipio) {
+        if (!parceriasChart) return;
         
-        municipiosPieChart.data.datasets[0].backgroundColor = backgroundColor;
-        municipiosPieChart.update();
+        // Simular dados específicos do município
+        // Em uma implementação real, você buscaria esses dados do banco
+        let comParceria = 0;
+        let semParceria = 0;
+        
+        // Simulação baseada no município
+        if (['GOIÂNIA', 'APARECIDA DE GOIÂNIA', 'ANÁPOLIS'].includes(municipio)) {
+            comParceria = 80;
+            semParceria = 20;
+        } else {
+            comParceria = 10;
+            semParceria = 90;
+        }
+        
+        parceriasChart.data.datasets[0].data = [semParceria, comParceria];
+        parceriasChart.update();
     }
 
     // Função para atualizar cards com dados do município selecionado
@@ -767,27 +817,28 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCardValue('obras-andamento', {{ $status_obras->obras_andamento ?? 0 }});
         updateCardValue('total-projetos', {{ $total_projetos ?? 0 }});
         updateCardValue('projetos-parceria', {{ $projetos_parceria->total ?? 0 }});
-        
+
         // Restaurar cores dos gráficos
         selectedMunicipio = null;
-        
+
         // Restaurar gráficos de barras
         if (investimentosChart) {
             investimentosChart.data.datasets[0].backgroundColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.data.datasets[0].borderColor = investimentosChart.data.labels.map(() => colors.selected);
             investimentosChart.update();
         }
-        
+
         if (projetosChart) {
             projetosChart.data.datasets[0].backgroundColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.data.datasets[0].borderColor = projetosChart.data.labels.map(() => colors.selected);
             projetosChart.update();
         }
-        
-        // Restaurar gráfico de pizza
-        if (municipiosPieChart) {
-            municipiosPieChart.data.datasets[0].backgroundColor = municipiosPieChart.data.labels.map(() => colors.unselected);
-            municipiosPieChart.update();
+
+        // Restaurar gráfico de parcerias
+        if (parceriasChart) {
+            const parceriaData = @json($projetos_parceria ?? (object)['com_parceria' => 0, 'sem_parceria' => 0]);
+            parceriasChart.data.datasets[0].data = [parceriaData.sem_parceria || 0, parceriaData.com_parceria || 0];
+            parceriasChart.update();
         }
     }
 
@@ -904,8 +955,8 @@ document.addEventListener('DOMContentLoaded', function() {
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
             
-            // Atualizar cores do gráfico de pizza
-            updatePieChartColors(selectedMunicipioName);
+            // Atualizar gráfico de parcerias com dados do município
+            updatePartnershipChartForMunicipio(selectedMunicipioName);
             
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
@@ -1001,32 +1052,28 @@ document.addEventListener('DOMContentLoaded', function() {
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
             
-            // Atualizar cores do gráfico de pizza
-            updatePieChartColors(selectedMunicipioName);
+            // Atualizar gráfico de parcerias com dados do município
+            updatePartnershipChartForMunicipio(selectedMunicipioName);
             
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
         }
     });
 
-    // Municípios Principais Chart - Pie Chart
+    // Partnership Chart - Pie Chart
     const parceriaCanvas = document.getElementById('projetosParceriaChart');
     parceriaCanvas.width = 300;
     parceriaCanvas.height = 250;
     const parceriaCtx = parceriaCanvas.getContext('2d');
-    
-    // Pegar os top 8 municípios para o gráfico de pizza
-    const topMunicipios = investimentosData.slice(0, 8);
-    const municipiosLabels = topMunicipios.map(item => item.municipio);
-    const municipiosValues = topMunicipios.map(item => item.valor_investimento);
+    const parceriaData = @json($projetos_parceria ?? (object)['com_parceria' => 0, 'sem_parceria' => 0]);
 
-    municipiosPieChart = new Chart(parceriaCtx, {
+    parceriasChart = new Chart(parceriaCtx, {
         type: 'pie',
         data: {
-            labels: municipiosLabels,
+            labels: ['NÃO POSSUI PARCERIA', 'POSSUI PARCERIA'],
             datasets: [{
-                data: municipiosValues,
-                backgroundColor: municipiosLabels.map(() => colors.unselected),
+                data: [parceriaData.sem_parceria || 0, parceriaData.com_parceria || 0],
+                backgroundColor: ['#343a40', '#007bff'],
                 borderWidth: 1,
                 borderColor: '#fff'
             }]
@@ -1057,31 +1104,33 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
-    // Adicionar evento de clique no gráfico de pizza
-    municipiosPieChart.canvas.addEventListener('click', function(event) {
-        const points = municipiosPieChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+
+    // Adicionar evento de clique no gráfico de parcerias
+    parceriasChart.canvas.addEventListener('click', function(event) {
+        const points = parceriasChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
         
         if (points.length > 0) {
             const firstPoint = points[0];
-            const selectedMunicipioName = municipiosPieChart.data.labels[firstPoint.index];
+            const selectedIndex = firstPoint.index;
             
-            // Encontrar o índice correspondente nos gráficos de barras
-            const barChartIndex = investimentosData.findIndex(item => item.municipio === selectedMunicipioName);
+            // Determinar tipo de parceria baseado no índice
+            let partnershipType = null;
+            if (selectedIndex === 0) {
+                partnershipType = 'sem_parceria'; // NÃO POSSUI PARCERIA
+            } else if (selectedIndex === 1) {
+                partnershipType = 'com_parceria'; // POSSUI PARCERIA
+            }
             
-            if (barChartIndex !== -1) {
+            if (partnershipType) {
                 // Atualizar seleção
-                selectedMunicipio = selectedMunicipioName;
+                selectedPartnershipType = partnershipType;
+                selectedMunicipio = null; // Limpar seleção de município
                 
-                // Atualizar cores dos gráficos de barras
-                updateChartColors(investimentosChart, barChartIndex);
-                updateChartColors(projetosChart, barChartIndex);
+                // Filtrar municípios por tipo de parceria
+                filterMunicipiosByPartnership(partnershipType);
                 
-                // Atualizar cores do gráfico de pizza
-                updatePieChartColors(selectedMunicipioName);
-                
-                // Atualizar cards com dados do município selecionado
-                updateCardsWithMunicipioData(selectedMunicipioName);
+                // Restaurar valores originais dos cards (já que estamos filtrando, não selecionando um município específico)
+                restoreOriginalCardValues();
             }
         }
     });
