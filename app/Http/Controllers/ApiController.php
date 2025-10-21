@@ -51,8 +51,8 @@ class ApiController extends Controller
                 projeto_obras.longitude,
                 projeto_obras.municipio
             FROM mapaobras
-            INNER JOIN projeto_obras ON projeto_obras.id_mapa_obra = mapaobras.id
-            WHERE situacao_obra IN ('P','A', 'I', 'C')";
+            LEFT JOIN projeto_obras ON projeto_obras.id_mapa_obra = mapaobras.id
+            WHERE situacao_obra IN ('P','A', 'I', 'C', 'D')";
     }
 
     /**
@@ -63,12 +63,12 @@ class ApiController extends Controller
         try {
             // Log simples para debug
             error_log('Filter method called with params: ' . json_encode($request->all()));
-            \Log::info('Filter method called with params: ' . json_encode($request->all()));
+            \Log::info('Filter method called with params', ['params' => $request->all()]);
 
             // Debug específico para arrays
             foreach ($request->all() as $key => $value) {
                 if (is_array($value)) {
-                    \Log::info("Array parameter $key: " . json_encode($value));
+                    \Log::info("Array parameter $key", ['value' => $value]);
                 }
             }
             $queryParams = [];
@@ -77,15 +77,17 @@ class ApiController extends Controller
             // Parâmetros simples
             $nr_projeto = $request->get('nr_projeto');
             if (!empty($nr_projeto)) {
-                $sql .= " AND id_projeto = ?";
-                $queryParams[] = intval($nr_projeto);
+                $nr_projeto = intval($nr_projeto);
+                $sql .= " AND (mapaobras.id = ? OR mapaobras.id_projeto = ?)";
+                $queryParams[] = $nr_projeto;
+                $queryParams[] = $nr_projeto;
             }
 
             // Parâmetros múltiplos (arrays)
             $multiParams = [
                 'situacao_obra' => 'situacao_obra',
                 'tipos_do_projeto' => 'tipos_do_projeto',
-                'orgao' => 'orgao',
+                'orgao' => 'sigla',
                 'area_tematica' => 'area_tematica',
                 'nm_obra' => 'nome_projeto',
                 'municipio' => 'projeto_obras.municipio'
@@ -100,19 +102,19 @@ class ApiController extends Controller
 
                     // Para municípios, converter acentos e usar ILIKE para busca case-insensitive
                     if ($getKey === 'municipio') {
-                        \Log::info("Processando municípios: " . json_encode($values));
+                        \Log::info("Processando municípios", ['values' => $values]);
                         $sql .= " AND $dbColumn ILIKE ANY(ARRAY[";
                         $placeholders = [];
                         foreach ($values as $v) {
                             $placeholders[] = '?';
                             // Converter acentos para formato do banco
                             $normalized = strtoupper(str_replace(['â', 'ã', 'ç'], ['a', 'a', 'c'], $v));
-                            \Log::info("Município normalizado: '$v' -> '$normalized'");
+                            \Log::info("Município normalizado", ['original' => $v, 'normalized' => $normalized]);
                             $queryParams[] = $normalized;
                         }
                         $sql .= implode(',', $placeholders) . "])";
                     } else {
-                        \Log::info("Processando $getKey: " . json_encode($values));
+                        \Log::info("Processando $getKey", ['values' => $values]);
                         $placeholders = implode(',', array_fill(0, count($values), '?'));
                         $sql .= " AND $dbColumn IN ($placeholders)";
                         foreach ($values as $v) {
@@ -125,9 +127,9 @@ class ApiController extends Controller
             $consulta = DB::select($sql, $queryParams);
 
             // Debug temporário
-            \Log::info('SQL: ' . $sql);
-            \Log::info('Params: ' . json_encode($queryParams));
-            \Log::info('Result count: ' . count($consulta));
+            \Log::info('SQL', ['sql' => $sql]);
+            \Log::info('Params', ['params' => $queryParams]);
+            \Log::info('Result count', ['count' => count($consulta)]);
 
             return response()->json($consulta);
         } catch (\Exception $e) {

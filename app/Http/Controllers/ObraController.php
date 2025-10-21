@@ -19,7 +19,14 @@ class ObraController extends Controller
         try {
             $obras = $this->buscarObras();
 
-            return view('obras.index', compact('obras'));
+            // Buscar dados para os filtros
+            $situacoes = $this->getSituacaoObrasMaps();
+            $municipios = $this->getMunicipiosObras();
+            $areaTematica = $this->getAreaTematica();
+            $orgao = $this->getOrgaosObras();
+            $nome_obras = $this->getNomeObras();
+
+            return view('obras.index', compact('obras', 'situacoes', 'municipios', 'areaTematica', 'orgao', 'nome_obras'));
         } catch (\Exception $e) {
             return view('obras.index', ['obras' => [], 'erro' => 'Erro ao carregar obras: ' . $e->getMessage()]);
         }
@@ -80,7 +87,44 @@ class ObraController extends Controller
     {
         $sql = "
             SELECT
-                mapaobras.*,
+                mapaobras.id,
+                mapaobras.id_projeto,
+                mapaobras.nome_projeto,
+                mapaobras.objeto,
+                mapaobras.area_tematica,
+                mapaobras.data_de_inicio_ou_previsao,
+                mapaobras.valor_total_do_projeto,
+                mapaobras.situacao_obra,
+                mapaobras.data_prevista_conclusao,
+                mapaobras.estagio_execucao_percentual,
+                mapaobras.valor_pago,
+                mapaobras.saldo_a_pagar,
+                mapaobras.orgao,
+                mapaobras.sigla,
+                mapaobras.envolve_parceria_captacao_de_recursos,
+                mapaobras.tipo_de_instrumento,
+                mapaobras.numero_do_instrumento,
+                mapaobras.nome_do_parceiro_concedente,
+                mapaobras.início_vig_instrumento,
+                mapaobras.final_vig_Instrumento,
+                mapaobras.repasse_financeiro,
+                mapaobras.valor_recurso_parceiro,
+                mapaobras.contrapartida_pactuada,
+                mapaobras.projeto_possui_emenda_parlamentar,
+                mapaobras.numero_da_emenda,
+                mapaobras.data_de_paralisacao,
+                mapaobras.data_previa_de_retomada,
+                mapaobras.motivo_da_paralisacao,
+                mapaobras.Tempo_de_paralisacao,
+                mapaobras.responsavel_pela_inexecucao,
+                mapaobras.situacao,
+                mapaobras.nomeDocumentoEmpreita,
+                mapaobras.linkDocumentoEmpreita,
+                mapaobras.valorEmpenhado,
+                mapaobras.valorLiquidado,
+                mapaobras.valorExecutado,
+                mapaobras.numeroContratoEmpreita,
+                mapaobras.numeroProcessoSEI,
                 projeto_obras.latitude,
                 projeto_obras.longitude,
                 projeto_obras.municipio
@@ -101,7 +145,44 @@ class ObraController extends Controller
         try {
             $obra = DB::select("
                 SELECT
-                    mapaobras.*,
+                    mapaobras.id,
+                    mapaobras.id_projeto,
+                    mapaobras.nome_projeto,
+                    mapaobras.objeto,
+                    mapaobras.area_tematica,
+                    mapaobras.data_de_inicio_ou_previsao,
+                    mapaobras.valor_total_do_projeto,
+                    mapaobras.situacao_obra,
+                    mapaobras.data_prevista_conclusao,
+                    mapaobras.estagio_execucao_percentual,
+                    mapaobras.valor_pago,
+                    mapaobras.saldo_a_pagar,
+                    mapaobras.orgao,
+                    mapaobras.sigla,
+                    mapaobras.envolve_parceria_captacao_de_recursos,
+                    mapaobras.tipo_de_instrumento,
+                    mapaobras.numero_do_instrumento,
+                    mapaobras.nome_do_parceiro_concedente,
+                    mapaobras.início_vig_instrumento,
+                    mapaobras.final_vig_Instrumento,
+                    mapaobras.repasse_financeiro,
+                    mapaobras.valor_recurso_parceiro,
+                    mapaobras.contrapartida_pactuada,
+                    mapaobras.projeto_possui_emenda_parlamentar,
+                    mapaobras.numero_da_emenda,
+                    mapaobras.data_de_paralisacao,
+                    mapaobras.data_previa_de_retomada,
+                    mapaobras.motivo_da_paralisacao,
+                    mapaobras.Tempo_de_paralisacao,
+                    mapaobras.responsavel_pela_inexecucao,
+                    mapaobras.situacao,
+                    mapaobras.nomeDocumentoEmpreita,
+                    mapaobras.linkDocumentoEmpreita,
+                    mapaobras.valorEmpenhado,
+                    mapaobras.valorLiquidado,
+                    mapaobras.valorExecutado,
+                    mapaobras.numeroContratoEmpreita,
+                    mapaobras.numeroProcessoSEI,
                     projeto_obras.municipio,
                     projeto_obras.latitude,
                     projeto_obras.longitude
@@ -117,9 +198,35 @@ class ObraController extends Controller
 
             $obra = $obra[0]; // Converter array para objeto
 
-            return view('obras.detalhe-mapas', compact('obra'));
+            $data = ['obra' => $obra];
+
+            // Adicionar dados do Diário Oficial se houver processo SEI
+            if (!empty($obra->numeroprocessosei)) {
+                $data['diarioOficial'] = $this->getDiarioOficialDetails($obra->numeroprocessosei);
+            }
+
+            return view('obras.detalhe-mapas', $data);
         } catch (\Exception $e) {
             abort(500, 'Erro ao carregar detalhes da obra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtém detalhes do diário oficial
+     */
+    private function getDiarioOficialDetails($processoSei)
+    {
+        $queryDiarioOficial = "
+            SELECT edicao.data, edicao.numero, publicacao.pagina, publicacao.processo, publicacao.texto_publicacao, tipo.nome_tipo
+            FROM publicacao
+            INNER JOIN edicao ON edicao.id = publicacao.id_edicao
+            INNER JOIN tipo ON tipo.id_tipo = publicacao.tipo
+            WHERE publicacao.processo LIKE '%" . $processoSei . "'";
+
+        try {
+            return DB::select($queryDiarioOficial);
+        } catch (\Exception $e) {
+            return [];
         }
     }
 
@@ -128,6 +235,10 @@ class ObraController extends Controller
      */
     public function filter(Request $request)
     {
+        \Log::info('=== MÉTODO FILTER CHAMADO ===', []);
+        \Log::info('Parâmetros recebidos', ['params' => $request->all()]);
+        \Log::info('Método HTTP', ['method' => $request->method()]);
+        \Log::info('URL', ['url' => $request->url()]);
         try {
             $queryParams = [];
             $sql = "
@@ -140,46 +251,116 @@ class ObraController extends Controller
                     mapaobras.situacao_obra,
                     mapaobras.estagio_execucao_percentual,
                     mapaobras.valor_total_do_projeto,
-                    projeto_obras.municipio
+                    mapaobras.orgao,
+                    mapaobras.sigla,
+                    projeto_obras.municipio,
+                    projeto_obras.latitude,
+                    projeto_obras.longitude
                 FROM mapaobras
-                INNER JOIN projeto_obras ON projeto_obras.id_mapa_obra = mapaobras.id
+                LEFT JOIN projeto_obras ON projeto_obras.id_mapa_obra = mapaobras.id
                 WHERE situacao_obra IN ('P','A', 'I', 'C', 'D')";
 
-            // Filtro por número do projeto
+            // Filtro por número do projeto (busca tanto por ID quanto por id_projeto)
             if ($request->has('nr_projeto') && !empty($request->nr_projeto)) {
-                $sql .= " AND mapaobras.id_projeto = ?";
-                $queryParams[] = intval($request->nr_projeto);
+                $nr_projeto = intval($request->nr_projeto);
+                $sql .= " AND (mapaobras.id = ? OR mapaobras.id_projeto = ?)";
+                $queryParams[] = $nr_projeto;
+                $queryParams[] = $nr_projeto;
             }
 
             // Filtro por situação
-            if ($request->has('situacao') && !empty($request->situacao)) {
-                $sql .= " AND situacao_obra = ?";
-                $queryParams[] = $request->situacao;
+            if ($request->has('situacao_obra') && !empty($request->situacao_obra)) {
+                $situacaoObra = $request->situacao_obra;
+                if (is_array($situacaoObra)) {
+                    $placeholders = str_repeat('?,', count($situacaoObra) - 1) . '?';
+                    $sql .= " AND situacao_obra IN ($placeholders)";
+                    foreach ($situacaoObra as $s) {
+                        $queryParams[] = $s;
+                    }
+                } else {
+                    $sql .= " AND situacao_obra = ?";
+                    $queryParams[] = $situacaoObra;
+                }
             }
 
             // Filtro por município
             if ($request->has('municipio') && !empty($request->municipio)) {
-                $sql .= " AND projeto_obras.municipio LIKE ?";
-                $queryParams[] = '%' . $request->municipio . '%';
+                $municipio = $request->municipio;
+                if (is_array($municipio)) {
+                    $placeholders = str_repeat('?,', count($municipio) - 1) . '?';
+                    $sql .= " AND projeto_obras.municipio IN ($placeholders)";
+                    foreach ($municipio as $m) {
+                        $queryParams[] = $m;
+                    }
+                } else {
+                    $sql .= " AND projeto_obras.municipio LIKE ?";
+                    $queryParams[] = '%' . $municipio . '%';
+                }
             }
 
             // Filtro por área temática
             if ($request->has('area_tematica') && !empty($request->area_tematica)) {
-                $sql .= " AND area_tematica = ?";
-                $queryParams[] = $request->area_tematica;
+                $areaTematica = $request->area_tematica;
+                if (is_array($areaTematica)) {
+                    $placeholders = str_repeat('?,', count($areaTematica) - 1) . '?';
+                    $sql .= " AND area_tematica IN ($placeholders)";
+                    foreach ($areaTematica as $a) {
+                        $queryParams[] = $a;
+                    }
+                } else {
+                    $sql .= " AND area_tematica LIKE ?";
+                    $queryParams[] = '%' . $areaTematica . '%';
+                }
             }
 
             // Filtro por nome da obra
-            if ($request->has('nome_obra') && !empty($request->nome_obra)) {
-                $sql .= " AND nome_projeto LIKE ?";
-                $queryParams[] = '%' . $request->nome_obra . '%';
+            if ($request->has('nm_obra') && !empty($request->nm_obra)) {
+                $nmObra = $request->nm_obra;
+                if (is_array($nmObra)) {
+                    $placeholders = str_repeat('?,', count($nmObra) - 1) . '?';
+                    $sql .= " AND nome_projeto IN ($placeholders)";
+                    foreach ($nmObra as $n) {
+                        $queryParams[] = $n;
+                    }
+                } else {
+                    $sql .= " AND nome_projeto LIKE ?";
+                    $queryParams[] = '%' . $nmObra . '%';
+                }
+            }
+
+            // Filtro por órgão (usando sigla)
+            if ($request->has('orgao') && !empty($request->orgao)) {
+                \Log::info('=== FILTRO DE ÓRGÃO ATIVADO ===', []);
+                \Log::info('Valor do órgão', ['orgao' => $request->orgao]);
+
+                $orgao = $request->orgao;
+                if (is_array($orgao)) {
+                    $placeholders = str_repeat('?,', count($orgao) - 1) . '?';
+                    $sql .= " AND sigla IN ($placeholders)";
+                    foreach ($orgao as $o) {
+                        $queryParams[] = $o;
+                    }
+                } else {
+                    $sql .= " AND sigla = ?";
+                    $queryParams[] = $orgao;
+                }
+                \Log::info('SQL após filtro órgão', ['sql' => $sql]);
+            } else {
+                \Log::info('Filtro de órgão NÃO ativado', []);
             }
 
             $sql .= " ORDER BY mapaobras.nome_projeto";
 
             $obras = DB::select($sql, $queryParams);
 
-            return view('obras.index', compact('obras'));
+            // Buscar dados para os filtros
+            $situacoes = $this->getSituacaoObrasMaps();
+            $municipios = $this->getMunicipiosObras();
+            $areaTematica = $this->getAreaTematica();
+            $orgao = $this->getOrgaosObras();
+            $nome_obras = $this->getNomeObras();
+
+            return view('obras.index', compact('obras', 'situacoes', 'municipios', 'areaTematica', 'orgao', 'nome_obras'));
         } catch (\Exception $e) {
             return view('obras.index', ['obras' => [], 'erro' => 'Erro ao filtrar obras: ' . $e->getMessage()]);
         }
@@ -211,6 +392,96 @@ class ObraController extends Controller
             return response()->json([
                 'error' => 'Erro ao exportar obras: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Exporta obras para PDF
+     */
+    public function exportPdf()
+    {
+        try {
+            $obras = $this->buscarObras();
+            $data = [
+                'obras' => $obras,
+                'total' => count($obras),
+                'data_exportacao' => now()->format('d/m/Y H:i:s')
+            ];
+
+            $pdf = \PDF::loadView('obras.export-pdf', $data);
+            $pdf->setPaper('A4', 'landscape');
+
+            return $pdf->download('obras_' . now()->format('Y-m-d_H-i-s') . '.pdf');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('erro', 'Erro ao exportar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exporta obras para Excel
+     */
+    public function exportExcel()
+    {
+        return response()->json(['message' => 'Teste Excel funcionando', 'timestamp' => now()]);
+    }
+
+    /**
+     * Exporta obras para CSV
+     */
+    public function exportCsv()
+    {
+        try {
+            $obras = $this->buscarObras();
+
+            $filename = 'obras_' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($obras) {
+                $file = fopen('php://output', 'w');
+
+                // Adicionar BOM para UTF-8
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+                // Cabeçalhos
+                fputcsv($file, [
+                    'ID Projeto', 'Nome do Projeto', 'Objeto', 'Área Temática',
+                    'Situação', 'Município', 'Data Início', 'Data Previsão Conclusão',
+                    'Valor Total', 'Valor Pago', 'Saldo a Pagar', 'Execução (%)',
+                    'Latitude', 'Longitude'
+                ], ';');
+
+                // Dados
+                foreach ($obras as $obra) {
+                    fputcsv($file, [
+                        $obra->id_projeto ?? '',
+                        $obra->nome_projeto ?? '',
+                        $obra->objeto ?? '',
+                        $obra->area_tematica ?? '',
+                        $obra->situacao_obra ?? '',
+                        $obra->municipio ?? '',
+                        $obra->data_de_inicio_ou_previsao ?? '',
+                        $obra->data_prevista_conclusao ?? '',
+                        $obra->valor_total_do_projeto ? 'R$ ' . number_format($obra->valor_total_do_projeto, 2, ',', '.') : '',
+                        $obra->valor_pago ? 'R$ ' . number_format($obra->valor_pago, 2, ',', '.') : '',
+                        $obra->saldo_a_pagar ? 'R$ ' . number_format($obra->saldo_a_pagar, 2, ',', '.') : '',
+                        $obra->estagio_execucao_percentual ? $obra->estagio_execucao_percentual . '%' : '',
+                        $obra->latitude ?? '',
+                        $obra->longitude ?? '',
+                    ], ';');
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro na exportação CSV: ' . $e->getMessage());
+            return redirect()->back()->with('erro', 'Erro ao exportar CSV: ' . $e->getMessage());
         }
     }
 
@@ -374,7 +645,7 @@ class ObraController extends Controller
             $response = file_get_contents($apiUrl . "token", false, stream_context_create($arrContextOptions));
             return json_decode($response);
         } catch (\Exception $e) {
-            Log::error('Erro ao obter token da API: ' . $e->getMessage());
+            Log::error('Erro ao obter token da API', ['error' => $e->getMessage()]);
             return null;
         }
     }
@@ -475,11 +746,11 @@ class ObraController extends Controller
     {
         try {
             // Validar API antes de fazer qualquer coisa
-            Log::info('Iniciando validação da API...');
+            Log::info('Iniciando validação da API...', []);
             $validation = $this->validateApi();
 
             if (!$validation['valid']) {
-                Log::error('Validação da API falhou: ' . $validation['message']);
+                Log::error('Validação da API falhou', ['message' => $validation['message']]);
                 return response()->json([
                     'success' => false,
                     'message' => 'API não está disponível: ' . $validation['message'],
@@ -488,7 +759,7 @@ class ObraController extends Controller
                 ], 503);
             }
 
-            Log::info('API validada com sucesso: ' . $validation['message']);
+            Log::info('API validada com sucesso', ['message' => $validation['message']]);
 
             $token = $this->getToken();
             $apiUrl = 'https://api.go.gov.br/';
@@ -502,7 +773,7 @@ class ObraController extends Controller
             ];
 
             // Deletar todas as obras existentes APENAS após validação
-            Log::info('Limpando dados existentes...');
+            Log::info('Limpando dados existentes...', []);
             Obra::deleteObras();
             ProjetoObra::query()->delete();
 
@@ -513,7 +784,7 @@ class ObraController extends Controller
             $batch_number = 1;
             $max_retries = 3; // Máximo de tentativas por lote
 
-            Log::info('Iniciando importação em lotes de ' . $batch_size);
+            Log::info('Iniciando importação em lotes', ['batch_size' => $batch_size]);
 
             do {
                 $retry_count = 0;
@@ -521,7 +792,7 @@ class ObraController extends Controller
 
                 while ($retry_count < $max_retries && !$batch_success) {
                     try {
-                        Log::info("Processando lote {$batch_number} - offset: {$offset} (tentativa " . ($retry_count + 1) . ")");
+                        Log::info('Processando lote', ['batch_number' => $batch_number, 'offset' => $offset, 'tentativa' => $retry_count + 1]);
 
                         // Fazer requisição para o lote atual
                         $url = $apiUrl . "governo/projetos/v1.0/monitoramento-seinfraV2?offset={$offset}&size={$batch_size}";
@@ -529,7 +800,7 @@ class ObraController extends Controller
                         $responseParse = json_decode($response);
 
                         if (!$responseParse || !is_array($responseParse)) {
-                            Log::warning("Lote {$batch_number}: Resposta inválida ou vazia");
+                            Log::warning('Lote com resposta inválida ou vazia', ['batch_number' => $batch_number]);
                             break;
                         }
 
@@ -577,12 +848,12 @@ class ObraController extends Controller
                             }
                         }
 
-                        Log::info("Lote {$batch_number} concluído: {$batch_projetos} projetos, {$batch_obras} obras");
+                        Log::info('Lote concluído', ['batch_number' => $batch_number, 'projetos' => $batch_projetos, 'obras' => $batch_obras]);
                         $batch_success = true;
 
                         // Se o lote retornou menos que o tamanho solicitado, chegamos ao fim
                         if (count($responseParse) < $batch_size) {
-                            Log::info('Último lote processado - importação concluída');
+                            Log::info('Último lote processado - importação concluída', []);
                             break 2; // Sair dos dois loops
                         }
 
@@ -594,12 +865,12 @@ class ObraController extends Controller
 
                     } catch (\Exception $e) {
                         $retry_count++;
-                        Log::error('Erro no lote ' . $batch_number . ' (tentativa ' . $retry_count . '): ' . $e->getMessage());
+                        Log::error('Erro no lote', ['batch_number' => $batch_number, 'tentativa' => $retry_count, 'error' => $e->getMessage()]);
 
                         // Se for erro 429, aguardar mais tempo
                         if (strpos($e->getMessage(), '429') !== false) {
                             $wait_time = 30 * $retry_count; // Aumenta o tempo de espera a cada tentativa
-                            Log::info("Rate limit atingido - aguardando {$wait_time} segundos...");
+                            Log::info('Rate limit atingido - aguardando', ['wait_time_seconds' => $wait_time]);
                             sleep($wait_time);
                         } else {
                             // Para outros erros, aguardar um pouco antes de tentar novamente
@@ -607,7 +878,7 @@ class ObraController extends Controller
                         }
 
                         if ($retry_count >= $max_retries) {
-                            Log::error("Máximo de tentativas atingido para o lote {$batch_number}");
+                            Log::error('Máximo de tentativas atingido para o lote', ['batch_number' => $batch_number]);
                             $offset += $batch_size;
                             $batch_number++;
                             break;
@@ -618,7 +889,7 @@ class ObraController extends Controller
             } while (true);
 
             if ($count_projetos > 0) {
-                Log::info("Importação concluída: {$count_projetos} projetos, {$count_obras} obras em {$batch_number} lotes");
+                Log::info('Importação concluída', ['projetos' => $count_projetos, 'obras' => $count_obras, 'lotes' => $batch_number]);
 
                 return response()->json([
                     'success' => true,
@@ -657,11 +928,11 @@ class ObraController extends Controller
     {
         try {
             // Validar API antes de fazer qualquer coisa
-            Log::info('Iniciando validação da API para importação incremental...');
+            Log::info('Iniciando validação da API para importação incremental...', []);
             $validation = $this->validateApi();
 
             if (!$validation['valid']) {
-                Log::error('Validação da API falhou: ' . $validation['message']);
+                Log::error('Validação da API falhou', ['message' => $validation['message']]);
                 return response()->json([
                     'success' => false,
                     'message' => 'API não está disponível: ' . $validation['message'],
@@ -670,7 +941,7 @@ class ObraController extends Controller
                 ], 503);
             }
 
-            Log::info('API validada com sucesso para importação incremental');
+            Log::info('API validada com sucesso para importação incremental', []);
 
             $token = $this->getToken();
             $apiUrl = 'https://api.go.gov.br/';
@@ -691,7 +962,7 @@ class ObraController extends Controller
             $batch_number = 1;
             $max_retries = 3;
 
-            Log::info('Iniciando importação incremental em lotes de ' . $batch_size);
+            Log::info('Iniciando importação incremental em lotes', ['batch_size' => $batch_size]);
 
             do {
                 $retry_count = 0;
@@ -699,14 +970,14 @@ class ObraController extends Controller
 
                 while ($retry_count < $max_retries && !$batch_success) {
                     try {
-                        Log::info("Processando lote {$batch_number} - offset: {$offset} (tentativa " . ($retry_count + 1) . ")");
+                        Log::info('Processando lote incremental', ['batch_number' => $batch_number, 'offset' => $offset, 'tentativa' => $retry_count + 1]);
 
                         $url = $apiUrl . "governo/projetos/v1.0/monitoramento-seinfraV2?offset={$offset}&size={$batch_size}";
                         $response = file_get_contents($url, false, stream_context_create($arrContextOptions));
                         $responseParse = json_decode($response);
 
                         if (!$responseParse || !is_array($responseParse)) {
-                            Log::warning("Lote {$batch_number}: Resposta inválida ou vazia");
+                            Log::warning('Lote com resposta inválida ou vazia', ['batch_number' => $batch_number]);
                             break;
                         }
 
@@ -719,7 +990,7 @@ class ObraController extends Controller
                                 $projeto_id = $projeto->projetoId ?? null;
 
                                 if (!$projeto_id) {
-                                    Log::warning('Projeto sem ID, pulando...');
+                                    Log::warning('Projeto sem ID, pulando...', []);
                                     continue;
                                 }
 
@@ -735,14 +1006,14 @@ class ObraController extends Controller
                                     $batch_atualizados++;
                                     $count_projetos_atualizados++;
 
-                                    Log::info("Projeto {$projeto_id} atualizado");
+                                    Log::info('Projeto atualizado', ['projeto_id' => $projeto_id]);
                                 } else {
                                     // Inserir novo projeto
                                     $id_mapa_obra = Obra::create($dto_projeto)->id;
                                     $batch_novos++;
                                     $count_projetos_novos++;
 
-                                    Log::info("Novo projeto {$projeto_id} inserido");
+                                    Log::info('Novo projeto inserido', ['projeto_id' => $projeto_id]);
                                 }
 
                                 // Processar municípios da obra
@@ -778,12 +1049,12 @@ class ObraController extends Controller
                             }
                         }
 
-                        Log::info("Lote {$batch_number} concluído: {$batch_novos} novos, {$batch_atualizados} atualizados, {$batch_obras_novas} obras");
+                        Log::info('Lote incremental concluído', ['batch_number' => $batch_number, 'novos' => $batch_novos, 'atualizados' => $batch_atualizados, 'obras' => $batch_obras_novas]);
                         $batch_success = true;
 
                         // Se o lote retornou menos que o tamanho solicitado, chegamos ao fim
                         if (count($responseParse) < $batch_size) {
-                            Log::info('Último lote processado - importação incremental concluída');
+                            Log::info('Último lote processado - importação incremental concluída', []);
                             break 2;
                         }
 
@@ -797,14 +1068,14 @@ class ObraController extends Controller
 
                         if (strpos($e->getMessage(), '429') !== false) {
                             $wait_time = 30 * $retry_count;
-                            Log::info("Rate limit atingido - aguardando {$wait_time} segundos...");
+                            Log::info('Rate limit atingido - aguardando', ['wait_time_seconds' => $wait_time]);
                             sleep($wait_time);
                         } else {
                             sleep(5);
                         }
 
                         if ($retry_count >= $max_retries) {
-                            Log::error("Máximo de tentativas atingido para o lote {$batch_number}");
+                            Log::error('Máximo de tentativas atingido para o lote', ['batch_number' => $batch_number]);
                             $offset += $batch_size;
                             $batch_number++;
                             break;
@@ -814,7 +1085,7 @@ class ObraController extends Controller
 
             } while (true);
 
-            Log::info("Importação incremental concluída: {$count_projetos_novos} novos, {$count_projetos_atualizados} atualizados, {$count_obras_novas} obras");
+            Log::info('Importação incremental concluída', ['projetos_novos' => $count_projetos_novos, 'projetos_atualizados' => $count_projetos_atualizados, 'obras_novas' => $count_obras_novas]);
 
             return response()->json([
                 'success' => true,
@@ -1120,7 +1391,7 @@ class ObraController extends Controller
                     }
 
                 } catch (\Exception $e) {
-                    Log::error('Erro ao processar projeto de teste: ' . $e->getMessage());
+                    Log::error('Erro ao processar projeto de teste', ['error' => $e->getMessage()]);
                     continue;
                 }
             }
@@ -1136,12 +1407,100 @@ class ObraController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Erro no teste de importação: ' . $e->getMessage());
+            Log::error('Erro no teste de importação', ['error' => $e->getMessage()]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Erro no teste: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Obtém situações das obras
+     */
+    private function getSituacaoObrasMaps()
+    {
+        try {
+            $query = "SELECT DISTINCT situacao_obra FROM mapaobras WHERE situacao_obra IN ('P', 'A', 'C', 'I', 'D')";
+            $consulta = DB::select($query);
+
+            // Transformar os códigos em objetos com código e descrição
+            $situacoes = [];
+            foreach ($consulta as $item) {
+                $situacoes[] = (object) [
+                    'situacao_obra' => $item->situacao_obra,
+                    'descricao' => handler_situation_work($item->situacao_obra)
+                ];
+            }
+
+            return $situacoes;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtém municípios das obras (igual ao mapa)
+     */
+    private function getMunicipiosObras()
+    {
+        try {
+            // Primeiro tenta buscar da tabela municipios
+            $query = 'SELECT nome, uf FROM municipios ORDER BY nome';
+            $consulta = DB::select($query);
+
+            // Se não há dados, busca da tabela projeto_obras
+            if (empty($consulta)) {
+                $query = 'SELECT DISTINCT municipio as nome FROM projeto_obras WHERE municipio IS NOT NULL ORDER BY municipio';
+                $consulta = DB::select($query);
+            }
+
+            return $consulta;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtém áreas temáticas
+     */
+    private function getAreaTematica()
+    {
+        try {
+            $query = "SELECT DISTINCT area_tematica FROM mapaobras WHERE area_tematica IS NOT NULL ORDER BY area_tematica";
+            $consulta = DB::select($query);
+            return $consulta;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtém órgãos das obras
+     */
+    private function getOrgaosObras()
+    {
+        try {
+            $query = "SELECT DISTINCT orgao, sigla FROM mapaobras WHERE sigla IS NOT NULL ORDER BY sigla";
+            $consulta = DB::select($query);
+            return $consulta;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Obtém nomes das obras
+     */
+    private function getNomeObras()
+    {
+        try {
+            $query = "SELECT DISTINCT nome_projeto FROM mapaobras WHERE situacao_obra IN ('P', 'A', 'C') AND nome_projeto IS NOT NULL ORDER BY nome_projeto";
+            $consulta = DB::select($query);
+            return $consulta;
+        } catch (\Exception $e) {
+            return [];
         }
     }
 }

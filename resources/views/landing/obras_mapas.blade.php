@@ -66,6 +66,15 @@
                                 @endforeach
                             </select>
                         </div>
+
+                                <div class="col-md-2">
+                            <label for="orgao" class="form-label">Órgão</label>
+                                    <select class="form-control" id="orgao" name="orgao[]" multiple>
+                                @foreach($orgao ?? [] as $orgaoItem)
+                                            <option value="{{ $orgaoItem->sigla ?? $orgaoItem }}">{{ $orgaoItem->sigla ?? $orgaoItem }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                             <!-- Botões de ação -->
@@ -150,12 +159,12 @@
         console.log('=== DEBUG getCustomIcon ===');
         console.log('Área temática recebida:', areaTematica);
 
-        // Mapear por área temática - VERSÃO SIMPLIFICADA
+        // Mapear por área temática - VERSÃO CORRIGIDA
         if (areaTematica) {
             const area = areaTematica.toLowerCase();
             console.log('Área em lowercase:', area);
 
-            // Teste simples e direto
+            // Mapeamento correto com marcadores específicos
             if (area === 'habitação') {
                 iconPath = '/images/markers/habitacao.png';
                 console.log('Usando marcador: HABITAÇÃO');
@@ -169,11 +178,11 @@
                 iconPath = '/images/markers/seguranca.png';
                 console.log('Usando marcador: SEGURANÇA');
             } else if (area === 'educação') {
-                iconPath = '/images/markers/saude.png';
-                console.log('Usando marcador: SAÚDE (para Educação)');
+                iconPath = '/images/markers/educacao.png';
+                console.log('Usando marcador: EDUCAÇÃO');
             } else if (area === 'infraestrutura e transportes') {
-                iconPath = '/images/markers/seguranca.png';
-                console.log('Usando marcador: SEGURANÇA (para Infraestrutura)');
+                iconPath = '/images/markers/rodovia.png';
+                console.log('Usando marcador: RODOVIA (Infraestrutura)');
             } else {
                 iconPath = '/images/markers/default.png';
                 console.log('Usando marcador: DEFAULT para:', area);
@@ -294,23 +303,31 @@
                 <div style="margin-bottom: 8px;">
                     <strong>Áreas Temáticas:</strong>
                 </div>
-                <div style="margin-bottom: 5px;">
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('habitação')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
                     <img src="/images/markers/habitacao.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                     <span>Habitação</span>
                 </div>
-                <div style="margin-bottom: 5px;">
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('esporte e lazer')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
                     <img src="/images/markers/esporte.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                     <span>Esporte</span>
                 </div>
-                <div style="margin-bottom: 5px;">
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('saúde')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
                     <img src="/images/markers/saude.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                    <span>Saúde / Educação</span>
+                    <span>Saúde</span>
                 </div>
-                <div style="margin-bottom: 5px;">
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('segurança pública')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
                     <img src="/images/markers/seguranca.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
-                    <span>Segurança / Infraestrutura</span>
+                    <span>Segurança</span>
                 </div>
-                <div style="margin-bottom: 5px;">
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('educação')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
+                    <img src="/images/markers/educacao.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                    <span>Educação</span>
+                </div>
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="filtrarPorAreaTematica('infraestrutura e transportes')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
+                    <img src="/images/markers/rodovia.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                    <span>Infraestrutura</span>
+                </div>
+                <div class="legend-item" style="margin-bottom: 5px; cursor: pointer; padding: 2px; border-radius: 3px;" onclick="limparFiltros()" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">
                     <img src="/images/markers/default.png" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
                     <span>Outros</span>
                 </div>
@@ -345,18 +362,57 @@
     // Função para filtrar obras
     async function filtrarObras() {
         console.log('=== INICIANDO FILTRO ===');
+        console.log('Função filtrarObras chamada');
 
-        // Coletar dados dos filtros
-        const formData = new FormData(document.getElementById('filterForm'));
-
-        // Construir parâmetros da URL manualmente para arrays
+        // Construir parâmetros da URL manualmente
         const params = new URLSearchParams();
 
         // Processar cada campo do formulário
-        for (const [key, value] of formData.entries()) {
-            if (value && value.trim() !== '') {
-                params.append(key, value);
-            }
+        const nrProjeto = $('#nr_projeto').val();
+        if (nrProjeto && nrProjeto.trim() !== '') {
+            params.append('nr_projeto', nrProjeto);
+        }
+
+        const situacaoObra = $('#situacao_obra').val();
+        if (situacaoObra && situacaoObra.length > 0) {
+            situacaoObra.forEach(situacao => {
+                params.append('situacao_obra[]', situacao);
+            });
+        }
+
+        const municipio = $('#municipio').val();
+        if (municipio && municipio.length > 0) {
+            municipio.forEach(mun => {
+                params.append('municipio[]', mun);
+            });
+        }
+
+        const areaTematica = $('#area_tematica').val();
+        console.log('Valor de areaTematica capturado:', areaTematica);
+        console.log('Tipo do valor:', typeof areaTematica);
+        console.log('É array?', Array.isArray(areaTematica));
+        if (areaTematica && areaTematica.length > 0) {
+            console.log('Adicionando área temática aos parâmetros:', areaTematica);
+            areaTematica.forEach(area => {
+                console.log('Adicionando área:', area);
+                params.append('area_tematica[]', area);
+            });
+        } else {
+            console.log('Nenhuma área temática selecionada');
+        }
+
+        const nmObra = $('#nm_obra').val();
+        if (nmObra && nmObra.length > 0) {
+            nmObra.forEach(nome => {
+                params.append('nm_obra[]', nome);
+            });
+        }
+
+        const orgao = $('#orgao').val();
+        if (orgao && orgao.length > 0) {
+            orgao.forEach(org => {
+                params.append('orgao[]', org);
+            });
         }
 
         console.log('Parâmetros enviados:', params.toString());
@@ -446,6 +502,75 @@
         window.location.reload();
     }
 
+    // Função para filtrar por área temática específica (escopo global)
+    window.filtrarPorAreaTematica = function(areaTematica) {
+        console.log('=== FILTRANDO POR ÁREA TEMÁTICA ===', areaTematica);
+
+        try {
+            // Primeiro, vamos ver quais opções estão disponíveis no campo
+            console.log('Opções disponíveis no campo area_tematica:');
+            $('#area_tematica option').each(function() {
+                console.log('Opção:', $(this).val(), '- Texto:', $(this).text());
+            });
+
+            // Limpar apenas outros filtros, mas manter área temática
+            $('#nr_projeto').val('');
+            $('#situacao_obra').val(null).trigger('change');
+            $('#municipio').val(null).trigger('change');
+            $('#nm_obra').val(null).trigger('change');
+            $('#orgao').val(null).trigger('change');
+
+            // Aguardar um pouco para o Select2 processar
+            setTimeout(function() {
+                // Tentar encontrar a opção correta
+                let opcaoEncontrada = null;
+                $('#area_tematica option').each(function() {
+                    const valor = $(this).val().toLowerCase();
+                    const texto = $(this).text().toLowerCase();
+                    console.log('Comparando:', valor, 'com', areaTematica.toLowerCase());
+                    console.log('Comparando texto:', texto, 'com', areaTematica.toLowerCase());
+
+                    if (valor === areaTematica.toLowerCase() || texto.includes(areaTematica.toLowerCase())) {
+                        opcaoEncontrada = $(this).val();
+                        console.log('Opção encontrada:', opcaoEncontrada);
+                    }
+                });
+
+                if (opcaoEncontrada) {
+                    // Obter valores atuais do campo
+                    const valoresAtuais = $('#area_tematica').val() || [];
+                    console.log('Valores atuais:', valoresAtuais);
+
+                    // Verificar se a opção já está selecionada (toggle)
+                    if (!valoresAtuais.includes(opcaoEncontrada)) {
+                        // Adicionar a nova opção aos valores existentes
+                        const novosValores = [...valoresAtuais, opcaoEncontrada];
+                        $('#area_tematica').val(novosValores).trigger('change');
+                        console.log('Área temática adicionada:', novosValores);
+                    } else {
+                        // Remover a opção se já estiver selecionada
+                        const novosValores = valoresAtuais.filter(valor => valor !== opcaoEncontrada);
+                        $('#area_tematica').val(novosValores).trigger('change');
+                        console.log('Área temática removida:', novosValores);
+                    }
+
+                    // Executar o filtro
+                    setTimeout(function() {
+                        console.log('Executando filtrarObras...');
+                        console.log('Valor final do campo:', $('#area_tematica').val());
+                        filtrarObras();
+                    }, 200);
+                } else {
+                    console.error('Opção não encontrada para:', areaTematica);
+                    alert('Área temática "' + areaTematica + '" não encontrada nas opções disponíveis');
+                }
+            }, 100);
+
+        } catch (error) {
+            console.error('Erro ao filtrar por área temática:', error);
+        }
+    }
+
     // Função para formatar valores
     function formatarValor(valor) {
         if (!valor) return '0,00';
@@ -466,12 +591,12 @@
         }
     }
 
-    // Inicializar quando a página carregar
+        // Inicializar quando a página carregar
     document.addEventListener('DOMContentLoaded', function() {
         console.log('=== INICIANDO MAPA ===');
 
         // Inicializar Select2
-        $('#situacao_obra, #municipio, #area_tematica, #nm_obra').select2({
+        $('#situacao_obra, #municipio, #area_tematica, #nm_obra, #orgao').select2({
             placeholder: 'Selecione...',
             allowClear: true,
             closeOnSelect: false,
@@ -481,6 +606,9 @@
                 }
             }
         });
+
+        // Teste da função
+        console.log('Testando função filtrarPorAreaTematica:', typeof window.filtrarPorAreaTematica);
 
         initMap();
         addMarkersToMap();

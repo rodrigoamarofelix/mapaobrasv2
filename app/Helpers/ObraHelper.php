@@ -27,7 +27,7 @@ if (!function_exists('handler_obra')) {
                 'nome_do_parceiro_concedente' => $projeto->nomeParceiro ?? null,
                 'início_vig_instrumento' => isset($projeto->dataInicioParceria) && $projeto->dataInicioParceria !== '-' ?
                     \Carbon\Carbon::createFromFormat('d/m/Y', $projeto->dataInicioParceria)->format('Y-m-d') : null,
-                'final_vig_instrumento' => isset($projeto->dataFimParceria) && $projeto->dataFimParceria !== '-' ?
+                'final_vig_Instrumento' => isset($projeto->dataFimParceria) && $projeto->dataFimParceria !== '-' ?
                     \Carbon\Carbon::createFromFormat('d/m/Y', $projeto->dataFimParceria)->format('Y-m-d') : null,
                 'repasse_financeiro' => $projeto->recurso ?? null,
                 'valor_recurso_parceiro' => isset($projeto->valorRecursoParceiro) ?
@@ -46,23 +46,23 @@ if (!function_exists('handler_obra')) {
                 'data_previa_de_retomada' => isset($projeto->dataPreviaRetomada) && $projeto->dataPreviaRetomada !== '-' ?
                     \Carbon\Carbon::createFromFormat('d/m/Y', $projeto->dataPreviaRetomada)->format('Y-m-d') : null,
                 'motivo_da_paralisacao' => $projeto->tipoMotivoParalizacao ?? null,
-                'tempo_de_paralisacao' => $projeto->qtdeDiasParalisados ?? null,
+                'Tempo_de_paralisacao' => $projeto->qtdeDiasParalisados ?? null,
                 'responsavel_pela_inexecucao' => $projeto->responsavelInexecucao ?? null,
                 'valor_pago' => isset($projeto->valorDesembolso) ?
                     (float) $projeto->valorDesembolso : null,
                 'saldo_a_pagar' => isset($projeto->valorSaldoExecutar) ?
                     (float) $projeto->valorSaldoExecutar : null,
                 'situacao' => $projeto->statusExecucao ?? null,
-                'nomedocumentoempreita' => isset($projeto->contratoDtos[0]) ? $projeto->contratoDtos[0]->nomeDocumentoEmpreita : null,
-                'linkdocumentoempreita' => isset($projeto->contratoDtos[0]->linksDtos[0]) ? $projeto->contratoDtos[0]->linksDtos[0]->descLinkDocumentoEmpreita : null,
-                'valorempenhado' => isset($projeto->valorEmpenhado) ?
+                'nomeDocumentoEmpreita' => isset($projeto->contratoDtos[0]) ? $projeto->contratoDtos[0]->nomeDocumentoEmpreita : null,
+                'linkDocumentoEmpreita' => isset($projeto->contratoDtos[0]->linksDtos[0]) ? $projeto->contratoDtos[0]->linksDtos[0]->descLinkDocumentoEmpreita : null,
+                'valorEmpenhado' => isset($projeto->valorEmpenhado) ?
                     (float) $projeto->valorEmpenhado : null,
-                'valorliquidado' => isset($projeto->valorLiquidado) ?
+                'valorLiquidado' => isset($projeto->valorLiquidado) ?
                     (float) $projeto->valorLiquidado : null,
-                'valorexecutado' => isset($projeto->valorExecutado) ?
+                'valorExecutado' => isset($projeto->valorExecutado) ?
                     (float) $projeto->valorExecutado : null,
-                'numerocontratoempreita' => isset($projeto->contratoDtos[0]) ? $projeto->contratoDtos[0]->numrContratoEmpreita : null,
-                'numeroprocessosei' => isset($projeto->projetoProcessoSeiDtos[0]) ? $projeto->projetoProcessoSeiDtos[0]->numeroProcessoSEI : null,
+                'numeroContratoEmpreita' => isset($projeto->contratoDtos[0]) ? $projeto->contratoDtos[0]->numrContratoEmpreita : null,
+                'numeroProcessoSEI' => isset($projeto->projetoProcessoSeiDtos[0]) ? $projeto->projetoProcessoSeiDtos[0]->numeroProcessoSEI : null,
             ];
 
             // Se debug estiver ativo, adicionar informações extras
@@ -111,7 +111,7 @@ if (!function_exists('handler_situation_work')) {
                 return 'Concluída';
             case 'I':
                 return 'Inacabado';
-            case 'P':  
+            case 'P':
                 return 'Paralisado';
             case 'D':
                 return 'Desconhecido';

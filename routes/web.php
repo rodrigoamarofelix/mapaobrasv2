@@ -46,6 +46,70 @@ Route::controller(LandingController::class)->group(function () {
     Route::get('/', 'index')->name('landing.index');
     Route::get('/saiba-mais', 'saibaMais')->name('landing.saiba-mais');
     Route::get('/bi', 'bi')->name('landing.bi');
+    Route::get('/bi2', 'bi2')->name('landing.bi2');
+    Route::get('/bi2-teste', function() {
+        return 'BI2 Teste funcionando!';
+    });
+
+Route::get('/teste-simples', function() {
+    return response()->json(['status' => 'ok', 'message' => 'Servidor funcionando']);
+});
+
+Route::get('/debug-dados-municipios', function() {
+    try {
+        // Testar JOIN
+        $teste_join = DB::select("SELECT COUNT(*) as total FROM projeto_obras INNER JOIN mapaobras ON projeto_obras.id_mapa_obra = mapaobras.id");
+        $total_join = $teste_join[0]->total ?? 0;
+
+        // Dados diretos de projeto_obras
+        $municipios_direto = DB::select("
+            SELECT
+                municipio,
+                COUNT(*) as total_projetos,
+                COUNT(*) * 1000000 as valor_investimento
+            FROM projeto_obras
+            WHERE municipio IS NOT NULL
+                AND municipio != ''
+            GROUP BY municipio
+            ORDER BY valor_investimento DESC
+            LIMIT 10
+        ");
+
+        // JOIN com valores reais
+        $municipios_join = [];
+        if ($total_join > 0) {
+            $municipios_join = DB::select("
+                SELECT
+                    projeto_obras.municipio,
+                    COUNT(DISTINCT mapaobras.id) as total_projetos,
+                    SUM(COALESCE(mapaobras.valor_total_do_projeto, 0)) as valor_investimento
+                FROM projeto_obras
+                INNER JOIN mapaobras ON projeto_obras.id_mapa_obra = mapaobras.id
+                WHERE projeto_obras.municipio IS NOT NULL
+                    AND projeto_obras.municipio != ''
+                    AND mapaobras.valor_total_do_projeto > 0
+                GROUP BY projeto_obras.municipio
+                ORDER BY valor_investimento DESC
+                LIMIT 10
+            ");
+        }
+
+        return response()->json([
+            'join_funcionando' => $total_join > 0,
+            'total_join' => $total_join,
+            'municipios_direto_count' => count($municipios_direto),
+            'municipios_direto' => $municipios_direto,
+            'municipios_join_count' => count($municipios_join),
+            'municipios_join' => $municipios_join,
+            'total_projeto_obras' => DB::select("SELECT COUNT(*) as total FROM projeto_obras")[0]->total ?? 0,
+            'total_mapaobras' => DB::select("SELECT COUNT(*) as total FROM mapaobras")[0]->total ?? 0
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()]);
+    }
+});
+    Route::get('/detalhes-projeto', 'detalhesProjeto')->name('landing.detalhes-projeto');
+    Route::get('/detalhes-projeto-teste', 'detalhesProjetoTeste')->name('landing.detalhes-projeto-teste');
     Route::get('/obras-maps', 'obrasMaps')->name('landing.obras-maps');
     Route::get('/obras-makers', 'obrasMakers')->name('landing.obras-makers');
     Route::get('/detalhe-mapas/{id}', 'detalheMapas')->name('landing.detalhe-mapas');
@@ -60,6 +124,9 @@ Route::controller(ObraController::class)->group(function () {
     Route::get('/detalhe-mapas/{id}', 'detalheMapas')->name('obras.detalhe-mapas');
     Route::post('/obras/filter', 'filter')->name('obras.filter');
     Route::get('/obras/export/json', 'export')->name('obras.export');
+    Route::get('/obras/export/pdf', 'exportPdf')->name('obras.export-pdf');
+    Route::get('/obras/export/csv', 'exportCsv')->name('obras.export-csv');
+    Route::get('/obras/export/excel', 'exportExcel')->name('obras.export-excel');
     Route::post('/obras/atualizar-cache', 'atualizarCache')->name('obras.atualizar-cache');
     Route::get('/obras/import-municipios', 'importMunicipios')->name('obras.import-municipios');
     Route::get('/obras/municipios', 'listMunicipios')->name('obras.municipios');

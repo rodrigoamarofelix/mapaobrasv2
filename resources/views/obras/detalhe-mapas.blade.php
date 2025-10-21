@@ -315,6 +315,57 @@ html, body {
         </div>
     </div>
     @endif
+
+    <!-- Seção do Diário Oficial -->
+    @if (!empty($diarioOficial))
+        <div class="row shadow-lg p-3 my-3 mx-1 bg-white rounded justify-content-center">
+            <div class="col-12 col-sm-2 offset-sm-1 my-2">
+                <h3>Diário oficial</h3>
+                <hr class="w-100 w-md-50">
+            </div>
+            <div class="col-12 col-sm-8"></div>
+            @foreach ($diarioOficial as $item)
+                <div class="col-12 col-sm-5 offset-sm-1 my-2">
+                    <div class="my-3">
+                        <i class="fa fa-calendar-o" aria-hidden="true"
+                            style="color: #28a745; float: left; margin-right: 10px; font-size: 2rem;"></i>
+                        <h4 class="por-title">Data</h4>
+                        <div id="proj_dt_fim" class="por-txt p-0">
+                            {{ $item->data != 'null' ? date('d/m/Y', strtotime($item->data)) : 'Não informado' }}
+                        </div>
+                    </div>
+                    <div class="my-3">
+                        <i class="fa fa-info-circle" aria-hidden="true"
+                            style="color: #28a745; float: left; margin-right: 10px; font-size: 2rem;"></i>
+                        <h4 class="por-title">Numero</h4>
+                        <div id="proj_dt_fim" class="por-txt p-0">
+                            {{ $item->numero != 'null' ? $item->numero : 'Não informado' }}</div>
+                    </div>
+                    <div class="my-3">
+                        <i class="fa fa-file-text" aria-hidden="true"
+                            style="color: #28a745; float: left; margin-right: 10px; font-size: 2rem;"></i>
+                        <h4 class="por-title">Página</h4>
+                        <div id="proj_dt_fim" class="por-txt p-0">
+                            {{ $item->pagina != 'null' ? $item->pagina : 'Não informado' }}</div>
+                    </div>
+                    <div class="my-3">
+                        <i class="fa fa-thumb-tack" aria-hidden="true"
+                            style="color: #28a745; float: left; margin-right: 10px; font-size: 2rem;"></i>
+                        <h4 class="por-title">Tipo do documento</h4>
+                        <div id="proj_dt_fim" class="por-txt p-0">
+                            {{ $item->nome_tipo != 'null' ? $item->nome_tipo : 'Não informado' }}</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-5   my-2">
+                    <h5>Texto do Diário Oficial</h5>
+                    <p>{{ $item->texto_publicacao != 'null' ? $item->texto_publicacao : 'Não informado' }}</p>
+                </div>
+                <div class="col-12">
+                    <hr>
+                </div>
+            @endforeach
+        </div>
+    @endif
 </div>
 @endsection
 

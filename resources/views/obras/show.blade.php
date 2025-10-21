@@ -5,14 +5,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mt-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ route('landing.index') }}">Início</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('obras.index') }}">Obras</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Detalhes</li>
-        </ol>
-    </nav>
 
     @if(isset($obra))
         <!-- Header Section -->
@@ -157,7 +149,7 @@
                                             </tr>
                                             <tr>
                                                 <td><strong>Final Vigência:</strong></td>
-                                                <td>{{ $obra->final_vig_Instrumento ? date('d/m/Y', strtotime($obra->final_vig_Instrumento)) : 'Não informado' }}</td>
+                                                <td>{{ isset($obra->final_vig_Instrumento) && $obra->final_vig_Instrumento ? date('d/m/Y', strtotime($obra->final_vig_Instrumento)) : 'Não informado' }}</td>
                                             </tr>
                                             <tr>
                                                 <td><strong>Valor Recurso Parceiro:</strong></td>
@@ -196,7 +188,7 @@
                                         <table class="table table-borderless">
                                             <tr>
                                                 <td><strong>Tempo de Paralisação:</strong></td>
-                                                <td>{{ $obra->Tempo_de_paralisacao ?? 'Não informado' }}</td>
+                                                <td>{{ isset($obra->Tempo_de_paralisacao) ? $obra->Tempo_de_paralisacao : 'Não informado' }}</td>
                                             </tr>
                                             <tr>
                                                 <td><strong>Responsável pela Inexecução:</strong></td>
@@ -231,7 +223,7 @@
                     @endif
 
                     <!-- Documentos -->
-                    @if($obra->nomeDocumentoEmpreita || $obra->linkDocumentoEmpreita)
+                    @if((isset($obra->nomeDocumentoEmpreita) && $obra->nomeDocumentoEmpreita) || (isset($obra->linkDocumentoEmpreita) && $obra->linkDocumentoEmpreita))
                         <div class="card mb-4">
                             <div class="card-header">
                                 <h5 class="mb-0">
@@ -239,10 +231,10 @@
                                 </h5>
                             </div>
                             <div class="card-body">
-                                @if($obra->nomeDocumentoEmpreita)
+                                @if(isset($obra->nomeDocumentoEmpreita) && $obra->nomeDocumentoEmpreita)
                                     <p><strong>Documento:</strong> {{ $obra->nomeDocumentoEmpreita }}</p>
                                 @endif
-                                @if($obra->linkDocumentoEmpreita)
+                                @if(isset($obra->linkDocumentoEmpreita) && $obra->linkDocumentoEmpreita)
                                     <a href="{{ $obra->linkDocumentoEmpreita }}" target="_blank" class="btn btn-primary btn-sm">
                                         <i class="fas fa-external-link-alt me-1"></i>Abrir Documento
                                     </a>
@@ -298,6 +290,11 @@
 @endsection
 
 @section('scripts')
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 @if(isset($obra) && $obra->latitude && $obra->longitude)
 <script>
     // Inicializar mapa
@@ -315,17 +312,70 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Adicionar marcador
-        L.marker([{{ $obra->latitude }}, {{ $obra->longitude }}])
-            .addTo(map)
-            .bindPopup(`
-                <div class="popup-content">
-                    <h6 class="fw-bold">{{ $obra->nome_projeto ?? 'Nome não informado' }}</h6>
-                    <p class="mb-2"><strong>Objeto:</strong> {{ $obra->objeto ?? 'Não informado' }}</p>
-                    <p class="mb-2"><strong>Situação:</strong> {{ handler_situation_work($obra->situacao_obra) ?? 'Não informado' }}</p>
-                    <p class="mb-2"><strong>Município:</strong> {{ $obra->municipio ?? 'Não informado' }}</p>
-                </div>
-            `);
+        // Criar ícone personalizado baseado na situação da obra
+        function getCustomIcon(situacao) {
+            let color = '#6c757d'; // default cinza
+            let icon = 'fa-map-marker-alt';
+
+            switch(situacao) {
+                case 'C': // Concluída
+                    color = '#28a745';
+                    icon = 'fa-check-circle';
+                    break;
+                case 'A': // Em andamento
+                    color = '#007bff';
+                    icon = 'fa-play-circle';
+                    break;
+                case 'I': // Paralisada
+                    color = '#ffc107';
+                    icon = 'fa-pause-circle';
+                    break;
+                case 'P': // Planejada
+                    color = '#17a2b8';
+                    icon = 'fa-clock';
+                    break;
+            }
+
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    background-color: ${color};
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                ">
+                    <i class="fas ${icon}" style="color: white; font-size: 14px;"></i>
+                </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        // Adicionar marcador personalizado
+        L.marker([{{ $obra->latitude }}, {{ $obra->longitude }}], {
+            icon: getCustomIcon('{{ $obra->situacao_obra }}')
+        })
+        .addTo(map)
+        .bindPopup(`
+            <div class="popup-content" style="min-width: 250px;">
+                <h6 class="fw-bold mb-2">{{ $obra->nome_projeto ?? 'Nome não informado' }}</h6>
+                <p class="mb-1"><strong>ID do Projeto:</strong> {{ $obra->id_projeto ?? $obra->id }}</p>
+                <p class="mb-1"><strong>Objeto:</strong> {{ Str::limit($obra->objeto ?? 'Não informado', 100) }}</p>
+                <p class="mb-1"><strong>Situação:</strong>
+                    <span class="badge bg-{{ $obra->situacao_obra == 'C' ? 'success' : ($obra->situacao_obra == 'A' ? 'primary' : ($obra->situacao_obra == 'I' ? 'warning' : 'secondary')) }}">
+                        {{ handler_situation_work($obra->situacao_obra) ?? 'Não informado' }}
+                    </span>
+                </p>
+                <p class="mb-1"><strong>Município:</strong> {{ $obra->municipio ?? 'Não informado' }}</p>
+                <p class="mb-1"><strong>Valor Total:</strong> R$ {{ number_format($obra->valor_total_do_projeto ?? 0, 2, ',', '.') }}</p>
+                <p class="mb-0"><strong>Execução:</strong> {{ $obra->estagio_execucao_percentual ?? 0 }}%</p>
+            </div>
+        `);
     }
 
     function exportarObra() {
