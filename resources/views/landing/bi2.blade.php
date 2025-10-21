@@ -308,7 +308,7 @@
                 <div class="charts-row">
                     <div class="chart-container-center">
                         <div class="chart-card">
-                            <h4>PROJETOS COM CAPTAÇÃO DE RECURSOS X PROJETOS COM RECURSOS DO ESTADO</h4>
+                            <h4>TOP MUNICÍPIOS POR INVESTIMENTO</h4>
                             <div class="chart-wrapper">
                                 <canvas id="projetosParceriaChart"></canvas>
         </div>
@@ -681,12 +681,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Dados dos gráficos
     const investimentosData = @json($investimentos_municipios ?? []);
     const projetosData = @json($projetos_municipios ?? []);
-    
+
     // Variáveis para controle de seleção
     let selectedMunicipio = null;
     let investimentosChart = null;
     let projetosChart = null;
-    
+    let municipiosPieChart = null;
+
     // Cores para estados
     const colors = {
         selected: '#28a745',      // Verde normal
@@ -694,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hover: '#20c997'          // Verde médio
     };
 
-    // Função para atualizar cores dos gráficos
+    // Função para atualizar cores dos gráficos de barras
     function updateChartColors(chart, selectedIndex) {
         const backgroundColor = chart.data.labels.map((label, index) => {
             return index === selectedIndex ? colors.selected : colors.unselected;
@@ -709,12 +710,24 @@ document.addEventListener('DOMContentLoaded', function() {
         chart.update();
     }
     
+    // Função para atualizar cores do gráfico de pizza
+    function updatePieChartColors(selectedMunicipioName) {
+        if (!municipiosPieChart) return;
+        
+        const backgroundColor = municipiosPieChart.data.labels.map((label) => {
+            return label === selectedMunicipioName ? colors.selected : colors.unselected;
+        });
+        
+        municipiosPieChart.data.datasets[0].backgroundColor = backgroundColor;
+        municipiosPieChart.update();
+    }
+
     // Função para atualizar cards com dados do município selecionado
     function updateCardsWithMunicipioData(municipio) {
         // Encontrar dados do município selecionado
         const investimentoData = investimentosData.find(item => item.municipio === municipio);
         const projetoData = projetosData.find(item => item.municipio === municipio);
-        
+
         if (investimentoData && projetoData) {
             // Atualizar cards com valores específicos do município
             updateCardValue('recursos-captacao-externa', investimentoData.valor_investimento);
@@ -726,7 +739,7 @@ document.addEventListener('DOMContentLoaded', function() {
             updateCardValue('projetos-parceria', projetoData.total_projetos);
         }
     }
-    
+
     // Função para atualizar valor de um card específico
     function updateCardValue(cardId, value) {
         const cardElement = document.querySelector(`[data-card="${cardId}"] .metric-value`);
@@ -743,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Função para restaurar valores originais dos cards
     function restoreOriginalCardValues() {
         // Restaurar valores originais (você pode ajustar estes valores conforme necessário)
@@ -754,6 +767,28 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCardValue('obras-andamento', {{ $status_obras->obras_andamento ?? 0 }});
         updateCardValue('total-projetos', {{ $total_projetos ?? 0 }});
         updateCardValue('projetos-parceria', {{ $projetos_parceria->total ?? 0 }});
+        
+        // Restaurar cores dos gráficos
+        selectedMunicipio = null;
+        
+        // Restaurar gráficos de barras
+        if (investimentosChart) {
+            investimentosChart.data.datasets[0].backgroundColor = investimentosChart.data.labels.map(() => colors.selected);
+            investimentosChart.data.datasets[0].borderColor = investimentosChart.data.labels.map(() => colors.selected);
+            investimentosChart.update();
+        }
+        
+        if (projetosChart) {
+            projetosChart.data.datasets[0].backgroundColor = projetosChart.data.labels.map(() => colors.selected);
+            projetosChart.data.datasets[0].borderColor = projetosChart.data.labels.map(() => colors.selected);
+            projetosChart.update();
+        }
+        
+        // Restaurar gráfico de pizza
+        if (municipiosPieChart) {
+            municipiosPieChart.data.datasets[0].backgroundColor = municipiosPieChart.data.labels.map(() => colors.unselected);
+            municipiosPieChart.update();
+        }
     }
 
     // Calcular altura interna do gráfico baseada no número de municípios
@@ -852,22 +887,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }]
     });
-    
+
     // Adicionar evento de clique no gráfico de investimentos
     investimentosChart.canvas.addEventListener('click', function(event) {
         const points = investimentosChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-        
+
         if (points.length > 0) {
             const firstPoint = points[0];
             const selectedIndex = firstPoint.index;
             const selectedMunicipioName = investimentosChart.data.labels[selectedIndex];
-            
+
             // Atualizar seleção
             selectedMunicipio = selectedMunicipioName;
-            
-            // Atualizar cores dos dois gráficos
+
+            // Atualizar cores dos gráficos de barras
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
+            
+            // Atualizar cores do gráfico de pizza
+            updatePieChartColors(selectedMunicipioName);
             
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
@@ -946,42 +984,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }]
     });
-    
+
     // Adicionar evento de clique no gráfico de projetos
     projetosChart.canvas.addEventListener('click', function(event) {
         const points = projetosChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-        
+
         if (points.length > 0) {
             const firstPoint = points[0];
             const selectedIndex = firstPoint.index;
             const selectedMunicipioName = projetosChart.data.labels[selectedIndex];
-            
+
             // Atualizar seleção
             selectedMunicipio = selectedMunicipioName;
-            
-            // Atualizar cores dos dois gráficos
+
+            // Atualizar cores dos gráficos de barras
             updateChartColors(investimentosChart, selectedIndex);
             updateChartColors(projetosChart, selectedIndex);
+            
+            // Atualizar cores do gráfico de pizza
+            updatePieChartColors(selectedMunicipioName);
             
             // Atualizar cards com dados do município selecionado
             updateCardsWithMunicipioData(selectedMunicipioName);
         }
     });
 
-    // Partnership Chart - Pie Chart
+    // Municípios Principais Chart - Pie Chart
     const parceriaCanvas = document.getElementById('projetosParceriaChart');
     parceriaCanvas.width = 300;
     parceriaCanvas.height = 250;
     const parceriaCtx = parceriaCanvas.getContext('2d');
-    const parceriaData = @json($projetos_parceria ?? (object)['com_parceria' => 0, 'sem_parceria' => 0]);
+    
+    // Pegar os top 8 municípios para o gráfico de pizza
+    const topMunicipios = investimentosData.slice(0, 8);
+    const municipiosLabels = topMunicipios.map(item => item.municipio);
+    const municipiosValues = topMunicipios.map(item => item.valor_investimento);
 
-    new Chart(parceriaCtx, {
+    municipiosPieChart = new Chart(parceriaCtx, {
         type: 'pie',
         data: {
-            labels: ['NÃO POSSUI PARCERIA', 'POSSUI PARCERIA'],
+            labels: municipiosLabels,
             datasets: [{
-                data: [parceriaData.sem_parceria || 0, parceriaData.com_parceria || 0],
-                backgroundColor: ['#343a40', '#007bff'],
+                data: municipiosValues,
+                backgroundColor: municipiosLabels.map(() => colors.unselected),
                 borderWidth: 1,
                 borderColor: '#fff'
             }]
@@ -1009,6 +1054,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 }
+            }
+        }
+    });
+    
+    // Adicionar evento de clique no gráfico de pizza
+    municipiosPieChart.canvas.addEventListener('click', function(event) {
+        const points = municipiosPieChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        
+        if (points.length > 0) {
+            const firstPoint = points[0];
+            const selectedMunicipioName = municipiosPieChart.data.labels[firstPoint.index];
+            
+            // Encontrar o índice correspondente nos gráficos de barras
+            const barChartIndex = investimentosData.findIndex(item => item.municipio === selectedMunicipioName);
+            
+            if (barChartIndex !== -1) {
+                // Atualizar seleção
+                selectedMunicipio = selectedMunicipioName;
+                
+                // Atualizar cores dos gráficos de barras
+                updateChartColors(investimentosChart, barChartIndex);
+                updateChartColors(projetosChart, barChartIndex);
+                
+                // Atualizar cores do gráfico de pizza
+                updatePieChartColors(selectedMunicipioName);
+                
+                // Atualizar cards com dados do município selecionado
+                updateCardsWithMunicipioData(selectedMunicipioName);
             }
         }
     });
