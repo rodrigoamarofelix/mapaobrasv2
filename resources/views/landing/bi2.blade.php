@@ -200,13 +200,17 @@
                     <i class="fas fa-filter me-2"></i>
                     FILTROS
                 </button>
+                <button type="button" class="btn btn-secondary btn-lg d-flex align-items-center gap-2 ms-2" id="restoreButton" onclick="restoreOriginalCardValues()" style="font-weight: 600; letter-spacing: 1px;">
+                    <i class="fas fa-undo me-2"></i>
+                    RESTAURAR VALORES
+                </button>
             </div>
 
             <!-- Metrics Section -->
             <div class="metrics-section">
                 <!-- Financial Resources -->
                 <div class="metrics-row">
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="recursos-captacao-externa">
                         <div class="metric-icon">
                             <i class="fas fa-coins"></i>
                     </div>
@@ -215,19 +219,19 @@
                             <p class="metric-value">R$ {{ number_format(($recursos_financeiros->recursos_captacao_externa ?? 0) / 1000000, 2, ',', '.') }} Mi</p>
                     </div>
                     </div>
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="recursos-estado">
                         <div class="metric-icon">
                             <i class="fas fa-plus"></i>
-                    </div>
+                </div>
                         <div class="metric-content">
                             <h3>RECURSOS DO ESTADO</h3>
                             <p class="metric-value">R$ {{ number_format(($recursos_financeiros->recursos_estado ?? 0) / 1000000000, 2, ',', '.') }} Bi</p>
                     </div>
                     </div>
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="recursos-totais">
                         <div class="metric-icon">
                             <i class="fas fa-equals"></i>
-                        </div>
+                    </div>
                         <div class="metric-content">
                             <h3>RECURSOS TOTAIS</h3>
                             <p class="metric-value">R$ {{ number_format(($recursos_financeiros->recursos_totais ?? 0) / 1000000000, 2, ',', '.') }} Bi</p>
@@ -237,7 +241,7 @@
 
                 <!-- Status Works -->
                 <div class="metrics-row">
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="obras-concluidas">
                         <div class="metric-icon">
                             <i class="fas fa-check-circle"></i>
                                 </div>
@@ -246,7 +250,7 @@
                             <p class="metric-value">R$ {{ number_format(($status_obras->obras_concluidas ?? 0) / 1000000000, 2, ',', '.') }} Bi</p>
                             </div>
                         </div>
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="obras-andamento">
                         <div class="metric-icon">
                             <i class="fas fa-pause-circle"></i>
                     </div>
@@ -255,7 +259,7 @@
                             <p class="metric-value">R$ {{ number_format(($status_obras->obras_paralisadas ?? 0) / 1000000, 2, ',', '.') }} Mi</p>
                 </div>
                                 </div>
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="total-projetos">
                         <div class="metric-icon">
                             <i class="fas fa-play-circle"></i>
                             </div>
@@ -264,7 +268,7 @@
                             <p class="metric-value">R$ {{ number_format(($status_obras->obras_andamento ?? 0) / 1000000000, 2, ',', '.') }} Bi</p>
                         </div>
                     </div>
-                    <div class="metric-card">
+                    <div class="metric-card" data-card="projetos-parceria">
                         <div class="metric-icon">
                             <i class="fas fa-project-diagram"></i>
                 </div>
@@ -314,15 +318,15 @@
     </div>
 </div>
 </div>
-</div>
+            </div>
 
 <!-- Debug Section -->
 @if(isset($debug_info))
 <div style="background: #f8f9fa; padding: 20px; margin: 20px; border-radius: 8px; font-family: monospace; font-size: 12px;">
     <h4>🔍 Debug Info:</h4>
     <pre>{{ json_encode($debug_info, JSON_PRETTY_PRINT) }}</pre>
-</div>
-@endif
+                                        </div>
+                                    @endif
 
 <style>
     .bi2-container {
@@ -544,7 +548,7 @@
     overflow-x: hidden;
     border: 1px solid #e9ecef;
     border-radius: 4px;
-    background: white;
+        background: white;
 }
 
 .chart-wrapper::-webkit-scrollbar {
@@ -677,6 +681,80 @@ document.addEventListener('DOMContentLoaded', function() {
     // Dados dos gráficos
     const investimentosData = @json($investimentos_municipios ?? []);
     const projetosData = @json($projetos_municipios ?? []);
+    
+    // Variáveis para controle de seleção
+    let selectedMunicipio = null;
+    let investimentosChart = null;
+    let projetosChart = null;
+    
+    // Cores para estados
+    const colors = {
+        selected: '#28a745',      // Verde normal
+        unselected: '#90EE90',    // Verde claro
+        hover: '#20c997'          // Verde médio
+    };
+
+    // Função para atualizar cores dos gráficos
+    function updateChartColors(chart, selectedIndex) {
+        const backgroundColor = chart.data.labels.map((label, index) => {
+            return index === selectedIndex ? colors.selected : colors.unselected;
+        });
+        
+        const borderColor = chart.data.labels.map((label, index) => {
+            return index === selectedIndex ? colors.selected : colors.unselected;
+        });
+        
+        chart.data.datasets[0].backgroundColor = backgroundColor;
+        chart.data.datasets[0].borderColor = borderColor;
+        chart.update();
+    }
+    
+    // Função para atualizar cards com dados do município selecionado
+    function updateCardsWithMunicipioData(municipio) {
+        // Encontrar dados do município selecionado
+        const investimentoData = investimentosData.find(item => item.municipio === municipio);
+        const projetoData = projetosData.find(item => item.municipio === municipio);
+        
+        if (investimentoData && projetoData) {
+            // Atualizar cards com valores específicos do município
+            updateCardValue('recursos-captacao-externa', investimentoData.valor_investimento);
+            updateCardValue('recursos-estado', investimentoData.valor_investimento);
+            updateCardValue('recursos-totais', investimentoData.valor_investimento);
+            updateCardValue('obras-concluidas', investimentoData.valor_investimento);
+            updateCardValue('obras-andamento', investimentoData.valor_investimento);
+            updateCardValue('total-projetos', projetoData.total_projetos);
+            updateCardValue('projetos-parceria', projetoData.total_projetos);
+        }
+    }
+    
+    // Função para atualizar valor de um card específico
+    function updateCardValue(cardId, value) {
+        const cardElement = document.querySelector(`[data-card="${cardId}"] .metric-value`);
+        if (cardElement) {
+            if (cardId.includes('projetos')) {
+                // Para projetos, mostrar número inteiro
+                cardElement.textContent = value.toLocaleString('pt-BR');
+            } else {
+                // Para valores monetários, mostrar em milhões
+                cardElement.textContent = 'R$ ' + (value / 1000000).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + ' Mi';
+            }
+        }
+    }
+    
+    // Função para restaurar valores originais dos cards
+    function restoreOriginalCardValues() {
+        // Restaurar valores originais (você pode ajustar estes valores conforme necessário)
+        updateCardValue('recursos-captacao-externa', {{ $recursos_financeiros->recursos_captacao_externa ?? 0 }});
+        updateCardValue('recursos-estado', {{ $recursos_financeiros->recursos_estado ?? 0 }});
+        updateCardValue('recursos-totais', {{ $recursos_financeiros->recursos_totais ?? 0 }});
+        updateCardValue('obras-concluidas', {{ $status_obras->obras_concluidas ?? 0 }});
+        updateCardValue('obras-andamento', {{ $status_obras->obras_andamento ?? 0 }});
+        updateCardValue('total-projetos', {{ $total_projetos ?? 0 }});
+        updateCardValue('projetos-parceria', {{ $projetos_parceria->total ?? 0 }});
+    }
 
     // Calcular altura interna do gráfico baseada no número de municípios
     const minHeightPerItem = 35; // altura mínima por município
@@ -688,7 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
     investimentosCanvas.height = chartHeight;
     const investimentosCtx = investimentosCanvas.getContext('2d');
 
-    new Chart(investimentosCtx, {
+    investimentosChart = new Chart(investimentosCtx, {
         type: 'bar',
         data: {
             labels: investimentosData.map(item => item.municipio || 'N/A'),
@@ -774,6 +852,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }]
     });
+    
+    // Adicionar evento de clique no gráfico de investimentos
+    investimentosChart.canvas.addEventListener('click', function(event) {
+        const points = investimentosChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        
+        if (points.length > 0) {
+            const firstPoint = points[0];
+            const selectedIndex = firstPoint.index;
+            const selectedMunicipioName = investimentosChart.data.labels[selectedIndex];
+            
+            // Atualizar seleção
+            selectedMunicipio = selectedMunicipioName;
+            
+            // Atualizar cores dos dois gráficos
+            updateChartColors(investimentosChart, selectedIndex);
+            updateChartColors(projetosChart, selectedIndex);
+            
+            // Atualizar cards com dados do município selecionado
+            updateCardsWithMunicipioData(selectedMunicipioName);
+        }
+    });
 
     // Projects by Municipality Chart - Horizontal Bar Chart
     const projetosCanvas = document.getElementById('projetosMunicipiosChart');
@@ -781,7 +880,7 @@ document.addEventListener('DOMContentLoaded', function() {
     projetosCanvas.height = chartHeight;
     const projetosCtx = projetosCanvas.getContext('2d');
 
-    new Chart(projetosCtx, {
+    projetosChart = new Chart(projetosCtx, {
         type: 'bar',
         data: {
             labels: projetosData.map(item => item.municipio || 'N/A'),
@@ -846,6 +945,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         }]
+    });
+    
+    // Adicionar evento de clique no gráfico de projetos
+    projetosChart.canvas.addEventListener('click', function(event) {
+        const points = projetosChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        
+        if (points.length > 0) {
+            const firstPoint = points[0];
+            const selectedIndex = firstPoint.index;
+            const selectedMunicipioName = projetosChart.data.labels[selectedIndex];
+            
+            // Atualizar seleção
+            selectedMunicipio = selectedMunicipioName;
+            
+            // Atualizar cores dos dois gráficos
+            updateChartColors(investimentosChart, selectedIndex);
+            updateChartColors(projetosChart, selectedIndex);
+            
+            // Atualizar cards com dados do município selecionado
+            updateCardsWithMunicipioData(selectedMunicipioName);
+        }
     });
 
     // Partnership Chart - Pie Chart
